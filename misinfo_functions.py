@@ -33,6 +33,8 @@ def generate_params_dict():
     B2_START_TS = np.random.choice([i for i in range(1, 11)])
     NTRUST_THRESHOLD = np.random.uniform()
     SP_THRESHOLD = np.random.uniform()
+    B1_START_Hatefulness = np.random.choice([i for i in range(1, 11)])
+    B2_START_Hatefulness = np.random.choice([i for i in range(1, 11)]) 
     return {
         "B1_NTRUST": B1_NTRUST,
         "B2_NTRUST": B2_NTRUST,
@@ -46,6 +48,8 @@ def generate_params_dict():
         "B2_START_TS": B2_START_TS,
         "NTRUST_THRESHOLD": NTRUST_THRESHOLD,
         "SP_THRESHOLD": SP_THRESHOLD,
+        "B1_START_Hatefulness": B1_START_Hatefulness, 
+        "B2_START_Hatefulness": B2_START_Hatefulness,
     }
 
 
@@ -58,16 +62,18 @@ def generate_params_dict():
 PARAMS_MAX = {
     "B1_NTRUST": 10,
     "B2_NTRUST": 10,
-    "B1_START_FO": 10,
+    "B1_START_FO": 10, # forcefulness
     "B2_START_FO": 10,
-    "B1_START_SP": 10,
+    "B1_START_SP": 10, #share propensity 
     "B2_START_SP": 10,
-    "B1_START_MB": 10,
+    "B1_START_MB": 10, #misinfo belief
     "B2_START_MB": 10,
-    "B1_START_TS": 10,
+    "B1_START_TS": 10, #trust stability 
     "B2_START_TS": 10,
     "NTRUST_THRESHOLD": 1.0,
     "SP_THRESHOLD": 1.0,
+    "B1_START_Hatefulness": 10,
+    "B2_START_Hatefulness": 10,
 }
 
 PARAMS_MIN = {
@@ -83,6 +89,8 @@ PARAMS_MIN = {
     "B2_START_TS": 1,
     "NTRUST_THRESHOLD": 0.00001,
     "SP_THRESHOLD": 0.000001,
+    "B1_START_Hatefulnes": 1,
+    "B2_START_Hatefulnes": 1,
 }
 
 PARAMS_STEP = {
@@ -98,6 +106,8 @@ PARAMS_STEP = {
     "B2_START_TS": 1,
     "NTRUST_THRESHOLD": 0.05,
     "SP_THRESHOLD": 0.05,
+    "B1_START_Hatefulnes": 1,
+    "B2_START_Hatefulnes": 1,
 }
 
 
@@ -129,8 +139,10 @@ def step_params_dict(params_dict):
         "MB_WT",
         "B1_START_TS",
         "B2_START_TS",
+        "B1_START_Hatefulnes",
+        "B2_START_Hatefulnes",
     }:
-        if np.random.uniform() > 0.5:
+        if np.random.uniform() > 0.5:  # the coinflip to increase or decrease the parameter
             params_dict[k] = min(PARAMS_MAX[k], params_dict[k] + PARAMS_STEP[k])
         else:
             params_dict[k] = max(PARAMS_MIN[k], params_dict[k] - PARAMS_STEP[k])
@@ -155,7 +167,7 @@ def step_params_dict(params_dict):
     return params_dict
 
 
-def calc_energy(agents, shares, time_step, tot_time_steps, centrality):
+def calc_energy(agents, shares_hate, time_step, tot_time_steps, centrality):
     """
     Calculates "energy" for simulated annealing.
     Takes as params:
@@ -176,9 +188,9 @@ def calc_energy(agents, shares, time_step, tot_time_steps, centrality):
     
     """
     how_much_shared_by_top_one_percent_gt = 0.8
-    shared = [np.sum([v for v in shares[a.agent_id].values()]) for a in agents]
+    shared = [np.sum([v for v in shares_hate[a.agent_id].values()]) for a in agents]
     shared_by_id = [
-        (a.agent_id, np.sum([v for v in shares[a.agent_id].values()])) for a in agents
+        (a.agent_id, np.sum([v for v in shares_hate[a.agent_id].values()])) for a in agents
     ]
     shared_by_id = sorted(shared_by_id, key=lambda b: b[0])
     shared_by_id = [s[1] for s in shared_by_id]
@@ -242,6 +254,12 @@ def update_agent_info(d):
     neighbor_forcefulness = d["neighbor_forcefulness"]
     NTRUST_THRESHOLD = d["NTRUST_THRESHOLD"]
     SP_THRESHOLD = d["SP_THRESHOLD"]
+    #new
+    hatefulness = d["hatefulness"]
+    neighbor_beliefs_hate = d["neighbor_beliefs_hate"]
+    hate_orientation = d["hate_orientation"]
+    neighbor_orientation = d["neighbor_orientation"] 
+
     for n in neighbor_trust.keys():
         neighbor_trust[n] = markov_update_log(
             neighbor_trust[n], trust_stability, MARKOV_STEP, NTRUST_THRESHOLD
@@ -250,7 +268,15 @@ def update_agent_info(d):
     trust_belief = []
     for tup, f in zip(neighbor_beliefs, neighbor_forcefulness):
         n, b = tup
-        if b > 0.5:
+        if b > 0.5: # if neighbor forcefulness is greater than 0.5 then we change our trust belief???
+            trust_belief.append(np.exp(neighbor_trust[n] + f))
+        else:
+            trust_belief.append(-1.0 * np.exp(neighbor_trust[n] + f))
+    
+    trust_belief_hate = []
+    for tup, f in zip(neighbor_beliefs_hate, neighbor_forcefulness):
+        n, b = tup
+        if b > 0.5: # if neighbor forcefulness is greater than 0.5 then we change our trust belief???
             trust_belief.append(np.exp(neighbor_trust[n] + f))
         else:
             trust_belief.append(-1.0 * np.exp(neighbor_trust[n] + f))
@@ -261,25 +287,46 @@ def update_agent_info(d):
             np.exp(misinfo_belief) + np.sum(trust_belief) - np.exp(agent_forcefulness),
         )
     )
-
+    hatefulness = np.log(
+        max(
+            0.00000000001,
+            np.exp(hatefulness) + np.sum(trust_belief_hate) - np.exp(agent_forcefulness),
+        )
+    )
+    print(misinfo_belief)
     share_propensity = markov_update_log(
         share_propensity, trust_stability, MARKOV_STEP, SP_THRESHOLD
     )
     rand0 = np.log(np.random.uniform())
-    if rand0 < (0.75 * share_propensity) + (0.25 * misinfo_belief):
+    if rand0 < (0.75 * share_propensity) + (0.25 * misinfo_belief): #whether the agent shares something or not 
         shares = True
     else:
         shares = False
+
+    #shares hate
+    rand0 = np.log(np.random.uniform())
+    if rand0 < (0.75 * share_propensity) + (0.25 * hatefulness): #whether the agent shares something or not 
+        shares_hate = True
+    else:
+        shares_hate = False
+
+    hate_orientation = hate_orientation 
+    
 
     return {
         "neighbor_trust": neighbor_trust,
         "misinfo_belief": misinfo_belief,
         "share_propensity": share_propensity,
         "shares": shares,
+        #new things to return - hate 
+        "hatefulness": hatefulness,
+        "shares_hate": shares_hate,
+        "hate_orientation": hate_orientation,
+
     }
 
 
-def make_agent_info_dict(agent, neighbor_beliefs, neighbor_forcefulness, params_dict):
+def make_agent_info_dict(agent, neighbor_beliefs, neighbor_forcefulness, neighbor_beliefs_hate, neighbor_orientation, params_dict):
     """
     Given an agent & some info about its neighbors & the current parameter state,
     package up the necessary parameters to calculate the agent's info for the next time step.
@@ -290,11 +337,15 @@ def make_agent_info_dict(agent, neighbor_beliefs, neighbor_forcefulness, params_
     return {
         "trust_stability": agent.trust_stability,
         "misinfo_belief": agent.misinfo_belief,
+        "hatefulness": agent.hatefulness,
         "share_propensity": agent.share_propensity,
         "neighbor_trust": agent.neighbors,
         "neighbor_beliefs": neighbor_beliefs,
+        "neighbor_beliefs_hate": neighbor_beliefs_hate,
         "neighbor_forcefulness": neighbor_forcefulness,
+        "neighbor_orientation":neighbor_orientation,
         "agent_forcefulness": agent.forcefulness,
         "NTRUST_THRESHOLD": params_dict["NTRUST_THRESHOLD"],
         "SP_THRESHOLD": params_dict["SP_THRESHOLD"],
+        "hate_orientation": agent.hate_orientation,
     }

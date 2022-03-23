@@ -8,6 +8,7 @@ class misinfoAgent(object):
         - share_propensity: the likelihood that this agent will share misinfo
         - misinfo_belief: the likelihood that this agent believes in misinfo
         - trust_stability: how stable this agent's trust in its neighbors is
+        - hatefulness: the likelihood this agent believes in hatespeech
     """
     def __init__(
         self,
@@ -17,6 +18,8 @@ class misinfoAgent(object):
         share_propensity,
         misinfo_belief,
         trust_stability,
+        hatefulness,
+        hate_orientation,
     ):
         super().__init__()
         self.agent_id = agent_id
@@ -25,3 +28,5 @@ class misinfoAgent(object):
         self.share_propensity = share_propensity
         self.misinfo_belief = misinfo_belief
         self.trust_stability = trust_stability
+        self.hatefulness = hatefulness
+        self.hate_orientation = hate_orientation 
