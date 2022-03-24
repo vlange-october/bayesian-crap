@@ -29,4 +29,7 @@ class misinfoAgent(object):
         self.misinfo_belief = misinfo_belief
         self.trust_stability = trust_stability
         self.hatefulness = hatefulness
-        self.hate_orientation = hate_orientation 
+        self.hate_orientation = hate_orientation
+    
+    def __str__(self) -> str:
+        return f'{self.hate_orientation}'
