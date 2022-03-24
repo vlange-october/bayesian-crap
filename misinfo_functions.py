@@ -258,7 +258,10 @@ def update_agent_info(d):
     hatefulness = d["hatefulness"]
     neighbor_beliefs_hate = d["neighbor_beliefs_hate"]
     hate_orientation = d["hate_orientation"]
+    
+    
     neighbor_orientation = d["neighbor_orientation"] 
+
 
     for n in neighbor_trust.keys():
         neighbor_trust[n] = markov_update_log(
@@ -287,13 +290,60 @@ def update_agent_info(d):
             np.exp(misinfo_belief) + np.sum(trust_belief) - np.exp(agent_forcefulness),
         )
     )
-    hatefulness = np.log(
-        max(
-            0.00000000001,
-            np.exp(hatefulness) + np.sum(trust_belief_hate) - np.exp(agent_forcefulness),
-        )
-    )
-    print(misinfo_belief)
+
+    sigma = 0.007 
+    #from dutta et al. 2018
+
+    #chance of being hateful from each exposure is sigma, counter hateful is sigma/2 per neighbor
+    #but if neighbors are hateful and counter hateful, chance of going either way is sigma/10
+
+    # if the agent is neutral  has hateful neighbors, the hatefulness updates and so does their orientation
+    # if not, then nothing changes 
+    # if hate_orientation == 0: # if the user is neutral
+    #     if 1 in  neighbor_orientation and 2 not in neighbor_orientation: # if they have hateful neighbors  and no nonhateful neighbors
+    #         hatefulness = np.log( # updates hatefulness, will be useful for joint model maybe??
+    #             max(
+    #                 0.00000000001,
+    #                 np.exp(hatefulness) + np.sum(trust_belief_hate) - np.exp(agent_forcefulness),
+    #             )
+    #         )
+    #         for neighbor in neighbor_orientation:
+    #             if neighbor == 1:
+    #                 if np.random.rand() < sigma:
+    #                     hate_orientation = 1
+    #     if 1 in  neighbor_orientation and 2 in neighbor_orientation: # if they have hateful neighbors  and nonhateful neighbors
+    #         hatefulness = np.log( # updates hatefulness, will be useful for joint model maybe?? 
+    #             max(
+    #                 0.00000000001,
+    #                 np.exp(hatefulness) + np.sum(trust_belief_hate) - np.exp(agent_forcefulness),
+    #             )
+    #         )
+    #         for neighbor in neighbor_orientation:
+    #             if neighbor == 1:
+    #                 if np.random.rand() < sigma/10:
+    #                     hate_orientation = 1
+    #             if neighbor == 2:
+    #                 if np.random.rand() < sigma/10:
+    #                     hate_orientation = 2 
+    #     if 1 not in  neighbor_orientation and 2 in neighbor_orientation: # if they have no hateful neighbors  and nonhateful neighbors
+    #         hatefulness = np.log( # updates hatefulness, will be useful for joint model maybe??
+    #             max(
+    #                 0.00000000001,
+    #                 np.exp(hatefulness) + np.sum(trust_belief_hate) - np.exp(agent_forcefulness),
+    #             )
+    #         )
+    #         for neighbor in neighbor_orientation:
+    #             if neighbor == 2:
+    #                 if np.random.rand() < sigma/2:
+    #                     hate_orientation = 1
+
+        
+
+    # else:
+    #     hatefulness = hatefulness 
+    #     hate_orientation = hate_orientation 
+
+
     share_propensity = markov_update_log(
         share_propensity, trust_stability, MARKOV_STEP, SP_THRESHOLD
     )
@@ -303,14 +353,14 @@ def update_agent_info(d):
     else:
         shares = False
 
-    #shares hate
+    #shares hate - going to be removed, doesn't actually affect anything 
     rand0 = np.log(np.random.uniform())
     if rand0 < (0.75 * share_propensity) + (0.25 * hatefulness): #whether the agent shares something or not 
         shares_hate = True
     else:
         shares_hate = False
 
-    hate_orientation = hate_orientation 
+    
     
 
     return {
