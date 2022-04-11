@@ -1,10 +1,23 @@
 import numpy as np
+import random
 from sklearn.linear_model import LinearRegression
 
 from utilities import markov_update_log
 
 MARKOV_STEP = 0.01
 # step for MCMC variable change; can update as needed for larger/smaller change increments.
+
+
+def choose_orientation(i, hate_agents,counter_hate_agents):
+    """
+    assigns agents to be hateful or counterhateful if they are in the hate agents list or counter hate agetns list 
+    """
+    orientation = 0 
+    if i in hate_agents:
+        orientation = 1
+    elif i in counter_hate_agents:
+        orientation = 2
+    return orientation
 
 def generate_params_dict():
     """
@@ -35,6 +48,20 @@ def generate_params_dict():
     SP_THRESHOLD = np.random.uniform()
     B1_START_Hatefulness = np.random.choice([i for i in range(1, 11)])
     B2_START_Hatefulness = np.random.choice([i for i in range(1, 11)]) 
+    B1_START_Hate_Hatefulnes = np.random.choice([i for i in range(10, 11)])
+    B2_START_Hate_Hatefulnes = np.random.choice([i for i in range(10, 11)])
+    B1_START_Counter_Hatefulnes = np.random.choice([i for i in range(1, 2)])
+    B2_START_Counter_Hatefulnes = np.random.choice([i for i in range(1, 2)])
+
+    #creates hateful agents and counter hateful agents by drawing from a beta distribution that is skewed toward 0 
+    num_hate_agents = round(abs(np.log(np.random.beta(1,10))))
+    num_counter_agents = round(abs(np.log(np.random.beta(1,10))))
+
+    total_agents = num_counter_agents + num_hate_agents
+    hate_nonhate_agents = random.sample(range(0,100),total_agents) #chooses which agents will be hateful and counter hateful 
+    hate_agents = hate_nonhate_agents[0:num_hate_agents] 
+    counter_hate_agents = hate_nonhate_agents[num_hate_agents:total_agents]
+    #print("hate, counter", num_hate_agents, num_counter_agents)
     return {
         "B1_NTRUST": B1_NTRUST,
         "B2_NTRUST": B2_NTRUST,
@@ -50,6 +77,12 @@ def generate_params_dict():
         "SP_THRESHOLD": SP_THRESHOLD,
         "B1_START_Hatefulness": B1_START_Hatefulness, 
         "B2_START_Hatefulness": B2_START_Hatefulness,
+        "B1_START_Hate_Hatefulnes": B1_START_Hate_Hatefulnes,
+        "B2_START_Hate_Hatefulnes": B2_START_Hate_Hatefulnes,
+        "B1_START_Counter_Hatefulnes": B1_START_Counter_Hatefulnes,
+        "B2_START_Counter_Hatefulnes": B2_START_Counter_Hatefulnes,
+        "hate_agents":hate_agents,
+        "counter_hate_agents":counter_hate_agents,
     }
 
 
@@ -58,6 +91,9 @@ def generate_params_dict():
 # or be less than values in PARAMS_MIN.
 # we modify a parameter by PARAMS_STEP if it is chosen to be modified
 # in the next simulated annealing step.
+
+#changed so that the hate users have to be between 7 and 10 hatefulness and
+#counter hate users have to be between 1 and 4
 
 PARAMS_MAX = {
     "B1_NTRUST": 10,
@@ -74,6 +110,10 @@ PARAMS_MAX = {
     "SP_THRESHOLD": 1.0,
     "B1_START_Hatefulness": 10,
     "B2_START_Hatefulness": 10,
+    "B1_START_Hate_Hatefulnes": 10, # hate users
+    "B2_START_Hate_Hatefulnes": 10,
+    "B1_START_Counter_Hatefulnes": 1, # counter hate users
+    "B2_START_Counter_Hatefulnes": 1,
 }
 
 PARAMS_MIN = {
@@ -91,6 +131,11 @@ PARAMS_MIN = {
     "SP_THRESHOLD": 0.000001,
     "B1_START_Hatefulnes": 1,
     "B2_START_Hatefulnes": 1,
+    "B1_START_Hate_Hatefulnes": 10, # hate users
+    "B2_START_Hate_Hatefulnes": 10,
+    "B1_START_Counter_Hatefulnes": 1, # counter hate users
+    "B2_START_Counter_Hatefulnes": 1,
+
 }
 
 PARAMS_STEP = {
@@ -262,6 +307,36 @@ def update_agent_info(d):
     
     neighbor_orientation = d["neighbor_orientation"] 
 
+    #updates hate_orientation and hatefulness
+    if hate_orientation == 0:
+        if 1 in neighbor_orientation: # if has hateful neighbors
+            if 2 in neighbor_orientation: # if has nonhateful neighbors 
+                if hatefulness == 10:
+                    if random.random() < 0.1:
+                        hate_orientation = 1
+                elif hatefulness == 1:
+                    if random.random() < 0.01:
+                        hate_orientation = 2
+                else: # reduced effect bc of so many neighbors
+                    hatefulness = hatefulness + (neighbor_orientation.count(1) * np.random.uniform(0,0.5)) *0.25
+                    hatefulness = hatefulness - (neighbor_orientation.count(2) * np.random.uniform(0,0.5)) *0.25
+                
+                    
+            else: # if does not have nonhateful neighbors
+                if hatefulness ==10:
+                    if random.random() < 0.3:
+                        hate_orientation = 1
+                else:
+                    hatefulness = hatefulness + (neighbor_orientation.count(1) * np.random.uniform(0,0.5))
+
+        if 2 in neighbor_orientation and 1 not in neighbor_orientation:
+            if hatefulness ==1:
+                if random.random() < 0.5:
+                    hate_orientation = 2
+            else:
+                hatefulness = hatefulness - (neighbor_orientation.count(2) * np.random.uniform(0,0.5))
+        hatefulness = hate_max_min(hatefulness)
+        
 
     for n in neighbor_trust.keys():
         neighbor_trust[n] = markov_update_log(
@@ -280,9 +355,10 @@ def update_agent_info(d):
     for tup, f in zip(neighbor_beliefs_hate, neighbor_forcefulness):
         n, b = tup
         if b > 0.5: # if neighbor forcefulness is greater than 0.5 then we change our trust belief???
-            trust_belief.append(np.exp(neighbor_trust[n] + f))
+            trust_belief_hate.append(np.exp(neighbor_trust[n] + f))
         else:
-            trust_belief.append(-1.0 * np.exp(neighbor_trust[n] + f))
+            trust_belief_hate.append(-1.0 * np.exp(neighbor_trust[n] + f))
+
 
     misinfo_belief = np.log(
         max(
@@ -360,6 +436,7 @@ def update_agent_info(d):
     else:
         shares_hate = False
 
+
     
     
 
@@ -374,7 +451,20 @@ def update_agent_info(d):
         "hate_orientation": hate_orientation,
 
     }
+def getList_ofkeys(dict):
+    list = []
+    for key in dict.keys():
+        list.append(key)
+          
+    return list
 
+def hate_max_min(hatefulness):
+    hatefulness = hatefulness
+    if hatefulness>10:
+        hatefulness = 10
+    if hatefulness < 1:
+        hatefulness = 1
+    return (hatefulness)
 
 def make_agent_info_dict(agent, neighbor_beliefs, neighbor_forcefulness, neighbor_beliefs_hate, neighbor_orientation, params_dict):
     """
