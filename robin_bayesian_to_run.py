@@ -280,7 +280,7 @@ def G_func(my_ensemble_P, x):
     # setting up simulation. 
 N_AGENTS = 100
 ALPHA = 2.5
-EPSILON_INIT = 0.10
+EPSILON_INIT = 0.25
 rnd_info = []
 
 ensemble_P = []
