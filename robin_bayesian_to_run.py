@@ -211,7 +211,7 @@ def p_x_y_hate(agents, hate_orientation_time, centrality, alpha):
     # we need to get a quantitative measurement for this.
     
     # in any spreading process we should expect that the spreading process is somewhat correlated with centrality 
-    final_hatefulnes = []
+    final_hatefulness = []
     for i in range(100):
         final_hatefulness.append(hate_orientation_time[i][249])
     hatefulness_by_id = [
