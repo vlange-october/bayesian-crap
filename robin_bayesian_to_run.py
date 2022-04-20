@@ -214,29 +214,12 @@ def p_x_y_hate(agents, hate_orientation_time, centrality, alpha):
     final_hatefulness = []
     for i in range(100):
         final_hatefulness.append(hate_orientation_time[i][249])
-    hatefulness_by_id = [
-        (([final_hatefulness[a.agent_id]])) for a in agents
-    ]
+    # hatefulness_by_id = [
+    #     (([final_hatefulness[a.agent_id]])) for a in agents
+    # ]
     #final_hatefulness = np.asarray(hatefulness_by_id)
 
-    dataset = pd.DataFrame({'centrality': list(centrality), 'hatefulness': list(final_hatefulness)}, columns=['centrality', 'hatefulness'])
-    #print(dataset)
-    X = dataset['hatefulness']
-    Y = dataset['centrality']
-    show_dummy = dataset[['hatefulness']]
-    dummy_hate = pd.get_dummies(show_dummy['hatefulness'], prefix="hate")
-
-    model = LinearRegression()
-    model.fit(dummy_hate,Y)
-    coeff_parameter = pd.DataFrame(model.coef_,dummy_hate.columns,columns=['Coefficient'])
-
-
-    centrality_to_n_shared_model_hate = model.coef_[1]
-    centrality_to_n_shared_model_counter = model.coef_[2]
-    centrality_to_n_shared_real_hate = 0.05 # arbitrary guess
-    centrality_to_n_shared_real_counter = 0.05 # arbitrary guess
-    loss += np.abs(centrality_to_n_shared_model_hate  - centrality_to_n_shared_real_hate) ** alpha
-    loss += np.abs(centrality_to_n_shared_model_counter  - centrality_to_n_shared_real_counter) ** alpha
+    
     
     #find out how many agents there were by each type 
     number_counter = final_hatefulness.count(2)
@@ -262,6 +245,27 @@ def p_x_y_hate(agents, hate_orientation_time, centrality, alpha):
     # n_shared_per_capita_model = np.sum(shared) / len(agents)
     # n_shared_per_capita_real = 1.0
     # loss += np.abs(n_shared_per_capita_model - n_shared_per_capita_real) ** alpha
+    dataset = pd.DataFrame({'centrality': list(centrality), 'hatefulness': list(final_hatefulness)}, columns=['centrality', 'hatefulness'])
+    #print(dataset)
+    X = dataset['hatefulness']
+    Y = dataset['centrality']
+    show_dummy = dataset[['hatefulness']]
+    dummy_hate = pd.get_dummies(show_dummy['hatefulness'], prefix="hate")
+    
+    
+    model = LinearRegression()
+    model.fit(dummy_hate,Y)
+    coeff_parameter = pd.DataFrame(model.coef_,dummy_hate.columns,columns=['Coefficient'])
+    
+    if len(model.coef_) == 3:
+        centrality_to_n_shared_model_hate = model.coef_[1]
+        centrality_to_n_shared_model_counter = model.coef_[2]
+        centrality_to_n_shared_real_hate = 0.05 # arbitrary guess
+        centrality_to_n_shared_real_counter = 0.05 # arbitrary guess
+        loss += np.abs(centrality_to_n_shared_model_hate  - centrality_to_n_shared_real_hate) ** alpha
+        loss += np.abs(centrality_to_n_shared_model_counter  - centrality_to_n_shared_real_counter) ** alpha
+    else:
+        loss = 0 
     
     return loss / alpha
     
