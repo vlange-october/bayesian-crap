@@ -58,6 +58,9 @@ class hateAgent(object):
         trust_stability,
         hatefulness,
         hate_orientation,
+        hate_forcefulness,
+        counterhate_forcefulness,
+        hate_inhibited_forcefulness,
     ):
         super().__init__()
         self.agent_id = agent_id
@@ -68,6 +71,9 @@ class hateAgent(object):
         self.trust_stability = trust_stability
         self.hatefulness = hatefulness
         self.hate_orientation = hate_orientation
+        self.hate_forcefulness = hate_forcefulness
+        self.counterhate_forcefulness = counterhate_forcefulness
+        self.hate_inhibited_forcefulness = hate_inhibited_forcefulness
     
     def __str__(self) -> str:
         return f'{self.hate_orientation}'

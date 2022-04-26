@@ -26,6 +26,23 @@ from utilities import markov_update_log, make_configuration_model_graph
 
 from sklearn.model_selection import train_test_split
 
+""""
+Robin's hate attempt
+
+
+things I've added:
+hatefulness - similar to misinfo belief, its the hatefulness of beliefs that ppl have 
+    goes from - 10 to pos 10 negative being having counter hateful beliefs
+
+shares_hate  - basically shares but for hatefulness, but people only share if they are hateful
+
+hate_orientation - basically if they are hateful (1), counter hateful (2) or neutral (0)
+removed exposed  
+
+to start off with i'll have 3% be hateful, 3% are counterhateful the rest will be nuetral 94%
+    - He. et al. (2021)
+"""
+
 
 
 def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
@@ -39,7 +56,7 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
 
     hate_agents = params_dict["hate_agents"]
     counter_hate_agents = params_dict["counter_hate_agents"]
-
+    
     for i in range(N_AGENTS): # creats the start parameters for each of the agents 
         #each agent gets one of these 
         #if statements are so that hate agents start out hateful and counter hateful agents are not
@@ -61,6 +78,15 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
                 ),
                 hatefulness=(
                     np.random.uniform(params_dict["B1_START_Hate_Hatefulnes"], params_dict["B2_START_Hate_Hatefulnes"])
+                ),
+                hate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate"], params_dict["B2_START_Infectiousness_hate"])
+                ),
+                counterhate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_counter"], params_dict["B2_START_Infectiousness_counter"])
+                ),
+                hate_inhibited_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate_inhibited"], params_dict["B2_START_Infectiousness_hate_inhibited"])
                 ),
                 hate_orientation= choose_orientation(i, hate_agents,counter_hate_agents)
             )
@@ -86,6 +112,15 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
                 hatefulness=(
                     np.random.uniform(params_dict["B1_START_Counter_Hatefulnes"], params_dict["B2_START_Counter_Hatefulnes"])
                 ),
+                hate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate"], params_dict["B2_START_Infectiousness_hate"])
+                ),
+                counterhate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_counter"], params_dict["B2_START_Infectiousness_counter"])
+                ),
+                hate_inhibited_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate_inhibited"], params_dict["B2_START_Infectiousness_hate_inhibited"])
+                ),
                 hate_orientation= choose_orientation(i, hate_agents,counter_hate_agents)
             )
             # give the hate and counter hate agents a certain amount of hate
@@ -109,6 +144,15 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
                 ),
                 hatefulness=(
                     np.random.uniform(params_dict["B1_START_Hatefulness"], params_dict["B2_START_Hatefulness"])
+                ),
+                hate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate"], params_dict["B2_START_Infectiousness_hate"])
+                ),
+                counterhate_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_counter"], params_dict["B2_START_Infectiousness_counter"])
+                ),
+                hate_inhibited_forcefulness = (
+                    np.random.uniform(params_dict["B1_START_Infectiousness_hate_inhibited"], params_dict["B2_START_Infectiousness_hate_inhibited"])
                 ),
                 hate_orientation= choose_orientation(i, hate_agents,counter_hate_agents)
             )
@@ -142,9 +186,12 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
                 "misinfo_belief": agent.misinfo_belief,
                 "share_propensity": agent.share_propensity,
                 "hatefulness": agent.hatefulness,
+                "hate_forcefulness": agent.hate_forcefulness,
+                "counterhate_forcefulness": agent.counterhate_forcefulness,
+                "hate_inhibited_forcefulness": agent.hate_inhibited_forcefulness
             }
 
-            
+
 
         neighbor_beliefs = [ # gets the neighbor beliefs 
             [(i, agents[i].misinfo_belief) for i in agent.neighbors.keys()]
@@ -161,8 +208,12 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
             [agents[i].hate_orientation for i in agent.neighbors.keys()] for agent in agents
         ]
         
+        # agent_info_dicts = [  #the most recent agent info, agent records goes all the way back 
+        #     make_agent_info_dict(a, b, f, h, ho, hf, chf,hif, params_dict)
+        #     for a, b, f, h, ho, hf, chf, hif in zip(agents, neighbor_beliefs, neighbor_forcefulness,neighbor_beliefs_hate, neighbor_orientation, hate_forcefulness, counterhate_forcefulness, hate_inhibited_forcefulness )
+        # ]
         agent_info_dicts = [  #the most recent agent info, agent records goes all the way back 
-            make_agent_info_dict(a, b, f, h, ho, params_dict)
+            make_agent_info_dict(a, b, f, h, ho,  params_dict)
             for a, b, f, h, ho in zip(agents, neighbor_beliefs, neighbor_forcefulness,neighbor_beliefs_hate, neighbor_orientation)
         ]
         
@@ -178,6 +229,11 @@ def run_agent_simulation_now_with_added_hate(N_AGENTS, params_dict):
             #newstuff
             shares_hate[agent.agent_id][time_step] = r["shares_hate"] # to scrap 
             agent.hatefulness = r["hatefulness"]
+
+            agent.hate_forcefulness = r["hate_forcefulness"]
+            agent.counterhate_forcefulness = r["counterhate_forcefulness"]
+            agent.hate_inhibited_forcefulness = r["hate_inhibited_forcefulness"]
+            
             agent.hate_orientation = r["hate_orientation"]
             hate_orientation_time[agent.agent_id][time_step] = r["hate_orientation"]
             hatefulness_time[agent.agent_id][time_step] = r["hatefulness"]
@@ -281,10 +337,11 @@ def G_func(my_ensemble_P, x):
     candidates = [np.exp(constant_proba) for tup in my_ensemble_P if tup[1] <= x]
     return np.sum(candidates)
 
-    # setting up simulation. 
+# setting up simulation. 
 N_AGENTS = 100
 ALPHA = 2.5
-EPSILON_INIT = 0.25
+EPSILON_INIT = 0.4# originally 0.5
+#0.25 = 8.5 min
 rnd_info = []
 
 ensemble_P = []
@@ -308,6 +365,7 @@ while len(ensemble_E) < 100:
     tup = (params_dict, p_x_y_hate(agents, hate_orientation_time, centrality, ALPHA))
 
     proba_p = np.exp(-1.0 * tup[1]/ EPSILON_INIT)
+    #print(proba_p)
     draw = np.random.uniform()
     if draw < proba_p:
         ensemble_E.append(tup)
@@ -316,8 +374,8 @@ while len(ensemble_E) < 100:
         print("goodnews")
     ensemble_P.append(tup)
     #print(len(ensemble_E))
-
-    # smoothed probabilities for items in ensemble_P
+    
+# smoothed probabilities for items in ensemble_P
 G_result = [G_func(ensemble_P, tup[1]) for tup in ensemble_P]
 # the starting "good" ensemble of predictions
 ensemble_E = [(tup[0], G_func(ensemble_P, tup[1])) for tup in ensemble_E]
@@ -358,3 +416,8 @@ while True:
     t += 1
     if (swap_rate / tries) < 0.05 and tries > 20:
         break
+
+
+# look for it to decrease slowly and if it increases or decreases fast that is a problem 
+#the more we are swapping out, then more it means that our ensemble wasnt very good 
+# so if its replacing a lot that means our ensemble is bad/ suspicious 

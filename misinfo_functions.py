@@ -53,6 +53,15 @@ def generate_params_dict():
     B1_START_Counter_Hatefulnes = np.random.choice([i for i in range(1, 2)])
     B2_START_Counter_Hatefulnes = np.random.choice([i for i in range(1, 2)])
 
+
+    B1_START_Infectiousness_hate = np.random.choice([i for i in range(1, 11)])
+    B2_START_Infectiousness_hate = np.random.choice([i for i in range(1, 11)])
+    B1_START_Infectiousness_counter = np.random.choice([i for i in range(1, 11)])
+    B2_START_Infectiousness_counter = np.random.choice([i for i in range(1, 11)])
+    B1_START_Infectiousness_hate_inhibited = np.random.choice([i for i in range(1, 11)]) 
+    B2_START_Infectiousness_hate_inhibited = np.random.choice([i for i in range(1, 11)])
+    
+
     #creates hateful agents and counter hateful agents by drawing from a beta distribution that is skewed toward 0 
     num_hate_agents = round(abs(np.log(np.random.beta(1,10))))
     num_counter_agents = round(abs(np.log(np.random.beta(1,10))))
@@ -83,6 +92,15 @@ def generate_params_dict():
         "B2_START_Counter_Hatefulnes": B2_START_Counter_Hatefulnes,
         "hate_agents":hate_agents,
         "counter_hate_agents":counter_hate_agents,
+
+        "B1_START_Infectiousness_hate" : B1_START_Infectiousness_hate,
+        "B2_START_Infectiousness_hate" : B2_START_Infectiousness_hate,
+
+        "B1_START_Infectiousness_counter" : B1_START_Infectiousness_counter,
+        "B2_START_Infectiousness_counter" : B2_START_Infectiousness_counter,
+
+        "B1_START_Infectiousness_hate_inhibited" : B1_START_Infectiousness_hate_inhibited,
+        "B2_START_Infectiousness_hate_inhibited" : B2_START_Infectiousness_hate_inhibited,
     }
 
 
@@ -114,6 +132,16 @@ PARAMS_MAX = {
     "B2_START_Hate_Hatefulnes": 10,
     "B1_START_Counter_Hatefulnes": 1, # counter hate users
     "B2_START_Counter_Hatefulnes": 1,
+    
+    "B1_START_Infectiousness_hate" : 10,
+    "B2_START_Infectiousness_hate" : 10,
+
+    "B1_START_Infectiousness_counter" : 10,
+    "B2_START_Infectiousness_counter" : 10,
+
+    "B1_START_Infectiousness_hate_inhibited" : 10,
+    "B2_START_Infectiousness_hate_inhibited" : 10,
+
 }
 
 PARAMS_MIN = {
@@ -136,6 +164,15 @@ PARAMS_MIN = {
     "B1_START_Counter_Hatefulnes": 1, # counter hate users
     "B2_START_Counter_Hatefulnes": 1,
 
+    "B1_START_Infectiousness_hate" : 0,
+    "B2_START_Infectiousness_hate" : 0,
+
+    "B1_START_Infectiousness_counter" : 0,
+    "B2_START_Infectiousness_counter" : 0,
+
+    "B1_START_Infectiousness_hate_inhibited" : 0,
+    "B2_START_Infectiousness_hate_inhibited" : 0,
+
 }
 
 PARAMS_STEP = {
@@ -153,6 +190,15 @@ PARAMS_STEP = {
     "SP_THRESHOLD": 0.05,
     "B1_START_Hatefulnes": 1,
     "B2_START_Hatefulnes": 1,
+
+    "B1_START_Infectiousness_hate" : 1,
+    "B2_START_Infectiousness_hate" : 1,
+
+    "B1_START_Infectiousness_counter" : 1,
+    "B2_START_Infectiousness_counter" : 1,
+
+    "B1_START_Infectiousness_hate_inhibited" : 1,
+    "B2_START_Infectiousness_hate_inhibited" : 1,
 }
 
 
@@ -303,7 +349,14 @@ def update_agent_info(d):
     hatefulness = d["hatefulness"]
     neighbor_beliefs_hate = d["neighbor_beliefs_hate"]
     hate_orientation = d["hate_orientation"]
+
+    hate_forcefulness = d["hate_forcefulness"]
+    counterhate_forcefulness = d["counterhate_forcefulness"]
+    hate_inhibited_forcefulness = d["hate_inhibited_forcefulness"]
+
+
     
+
     
     neighbor_orientation = d["neighbor_orientation"] 
 
@@ -312,10 +365,10 @@ def update_agent_info(d):
         if 1 in neighbor_orientation: # if has hateful neighbors
             if 2 in neighbor_orientation: # if has nonhateful neighbors 
                 if hatefulness == 10:
-                    if random.random() < 0.1:
+                    if random.random() < hate_inhibited_forcefulness/10:
                         hate_orientation = 1
                 elif hatefulness == 1:
-                    if random.random() < 0.01:
+                    if random.random() < counterhate_forcefulness/10:
                         hate_orientation = 2
                 else: # reduced effect bc of so many neighbors
                     hatefulness = hatefulness + (neighbor_orientation.count(1) * np.random.uniform(0,0.5)) *0.25
@@ -324,14 +377,14 @@ def update_agent_info(d):
                     
             else: # if does not have nonhateful neighbors
                 if hatefulness ==10:
-                    if random.random() < 0.3:
+                    if random.random() < hate_forcefulness/10:
                         hate_orientation = 1
                 else:
                     hatefulness = hatefulness + (neighbor_orientation.count(1) * np.random.uniform(0,0.5))
 
         if 2 in neighbor_orientation and 1 not in neighbor_orientation:
             if hatefulness ==1:
-                if random.random() < 0.5:
+                if random.random() < counterhate_forcefulness/10:
                     hate_orientation = 2
             else:
                 hatefulness = hatefulness - (neighbor_orientation.count(2) * np.random.uniform(0,0.5))
@@ -437,8 +490,6 @@ def update_agent_info(d):
         shares_hate = False
 
 
-    
-    
 
     return {
         "neighbor_trust": neighbor_trust,
@@ -449,6 +500,11 @@ def update_agent_info(d):
         "hatefulness": hatefulness,
         "shares_hate": shares_hate,
         "hate_orientation": hate_orientation,
+
+        "hate_forcefulness": hate_forcefulness,
+        "counterhate_forcefulness":counterhate_forcefulness,
+        "hate_inhibited_forcefulness": hate_inhibited_forcefulness,
+
 
     }
 def getList_ofkeys(dict):
@@ -488,4 +544,8 @@ def make_agent_info_dict(agent, neighbor_beliefs, neighbor_forcefulness, neighbo
         "NTRUST_THRESHOLD": params_dict["NTRUST_THRESHOLD"],
         "SP_THRESHOLD": params_dict["SP_THRESHOLD"],
         "hate_orientation": agent.hate_orientation,
+        "hate_forcefulness": agent.hate_forcefulness,
+        "counterhate_forcefulness": agent.counterhate_forcefulness,
+        "hate_inhibited_forcefulness": agent.hate_inhibited_forcefulness,
+
     }
